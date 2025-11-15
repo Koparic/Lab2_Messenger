@@ -13,6 +13,7 @@ namespace Messenger
         private TcpClient tcpClient;
         private bool isConnected;
         private string username;
+        private ChatClass curChat;
 
         public Client(string address, int port, string username)
         {
@@ -34,10 +35,8 @@ namespace Messenger
 
                     if (bytesRead > 0)
                     {
-                        //обработка получения сообщений
-
                         string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        Console.WriteLine($"Получено сообщение от сервера: {message}");
+                        curChat.AddMessege(message);
                     }
                 }
                 catch (IOException ioEx)
