@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace Messenger
     {
         private TcpListener listener;
         private List<ActiveClients> curActiveClients;
+        private ChatClass chat;
         
         public struct ActiveClients
         {
@@ -50,10 +52,23 @@ namespace Messenger
                     newC.username = dataReceived;
                     newC.tcpclient = client;
                     curActiveClients.Add(newC);
+                    HistoryUpdate();
+                    UserListUpdate();
                 }
                 _ = HandleClient(newC);
             }
         }
+
+        private List<string> ListUsernames()
+        {
+            List<string> names = new List<string>();
+            foreach (var us in curActiveClients)
+            {
+                names.Add(us.username);
+            }
+            return names;
+        }
+
 
         private async Task HandleClient(ActiveClients client)
         {
@@ -72,9 +87,10 @@ namespace Messenger
                         MessegeClass newMSSG = new MessegeClass(dataReceived);
                         if (newMSSG.Messege.recipient != null)
                         {
+                            chat.AddMessege(dataReceived);
                             foreach (ActiveClients actClient in curActiveClients)
                             {
-                                if (newMSSG.Messege.recipient == "All" || newMSSG.Messege.recipient == actClient.username)
+                                if (newMSSG.Messege.recipient == "All" || newMSSG.Messege.recipient == actClient.username || newMSSG.Messege.sender == actClient.username)
                                 {
                                     await actClient.tcpclient.GetStream().WriteAsync(buffer, 0, buffer.Length);
                                 }
@@ -85,7 +101,7 @@ namespace Messenger
 
                 catch (IOException ex)
                 {
-                    Console.WriteLine("Исключение при приёме данных: " + ex.Message);
+                    Console.WriteLine("Исключение при приёме данных (Юзер отключен): " + ex.Message);
                     curActiveClients.Remove(client);
                     client.tcpclient.Close();
                     break;
@@ -100,14 +116,52 @@ namespace Messenger
             }
         }
 
-        public void StopListening()
+        private async void UserListUpdate()
         {
-            listener?.Stop();
+            byte[] buffer = null;
+            try
+            {
+                buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ListUsernames()));
+                foreach (ActiveClients actClient in curActiveClients)
+                {
+                    await actClient.tcpclient.GetStream().WriteAsync(buffer, 0, buffer.Length);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("Не смог преобразовать curActiveClients в JSON: " + ex.Message); }
+            
+        }
+        private async void HistoryUpdate()
+        {
+            byte[] buffer = null;
+            try
+            {
+                buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(chat.Messeges));
+                foreach (ActiveClients actClient in curActiveClients)
+                {
+                    await actClient.tcpclient.GetStream().WriteAsync(buffer, 0, buffer.Length);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("Не смог преобразовать curActiveClients в JSON: " + ex.Message); }
+            
         }
 
-        public Server(int port = 9000, string localAddr = "192.168.0.5")
+
+        public void StopListening()
         {
+            foreach (ActiveClients actClient in curActiveClients)
+            {
+                actClient.tcpclient.Close();
+            }
+            listener?.Stop();
+            chat.SaveChat();
+        }
+
+        public Server( int port = 9000, string localAddr = "192.168.0.5")
+        {
+            chat = new ChatClass();
+            chat.LoadChat();
             this.StartListening(port, localAddr);
+            curActiveClients = new List<ActiveClients>();
         }
 
     }

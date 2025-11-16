@@ -9,10 +9,10 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace Messenger
 {
-    internal class MessegeClass
+    public class MessegeClass
     {
-        private messegeStruct _messege;
-        public messegeStruct Messege {  get { return _messege; } }
+        private messegeStruct _messege = new messegeStruct();
+        public messegeStruct Messege {  get { return _messege; } set { _messege = value; } }
         public struct messegeStruct{
             public string sender;
             public string recipient;
@@ -30,7 +30,9 @@ namespace Messenger
             _messege.text = text;
             _messege.sendingTime = DateTime.Now;
         }
-
+        public MessegeClass()
+        {
+        }
         public MessegeClass(string JSON)
         {
             try
@@ -39,13 +41,22 @@ namespace Messenger
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Исключение при конвертации или добавлеии: " + ex.Message);
+                _messege = new messegeStruct();
+                Console.WriteLine("Полученная строка это не сообщение: " + ex.Message);
             }
         }
 
         public string ConvertMessege()
         {
-            return JsonConvert.SerializeObject(_messege);
+            try
+            {
+                return JsonConvert.SerializeObject(_messege);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Сообщение не преобразовано в JSON: " + ex.Message);
+            }
+            return null;
         }
 
     }

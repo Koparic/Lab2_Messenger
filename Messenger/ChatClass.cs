@@ -24,17 +24,15 @@ namespace Messenger
         //{
         //}
 
-        private List<MessegeClass.messegeStruct> messeges;
+        private List<MessegeClass> _messeges = new List<MessegeClass>();
+        public List<MessegeClass> Messeges {  get { return _messeges; } }
 
         public void AddMessege(string messege)
         {
-            try
+            MessegeClass newM = new MessegeClass(messege);
+            if (newM != null && newM.Messege.text != null)
             {
-                messeges.Add(JsonConvert.DeserializeObject<MessegeClass.messegeStruct>(messege));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Исключение при конвертации или добавлеии: " + ex.Message);
+                _messeges.Add(newM);
             }
         }
 
@@ -43,12 +41,12 @@ namespace Messenger
             string filePath = "ChatHistory.json";
             using (StreamWriter writer = File.CreateText(filePath))
             {
-                string json = JsonConvert.SerializeObject(messeges, Newtonsoft.Json.Formatting.Indented);
+                string json = JsonConvert.SerializeObject(_messeges, Newtonsoft.Json.Formatting.Indented);
                 writer.Write(json);
             }
         }
 
-        public List<MessegeClass.messegeStruct> LoadChat()
+        public void LoadChat()
         {
             string filePath = "ChatHistory.json";
             if (File.Exists(filePath))
@@ -56,12 +54,25 @@ namespace Messenger
                 using (StreamReader reader = File.OpenText(filePath))
                 {
                     string json = reader.ReadToEnd();
-                    messeges.Clear();
-                    foreach (MessegeClass.messegeStruct m in JsonConvert.DeserializeObject<List<MessegeClass.messegeStruct>>(json))
-                        messeges.Add(m);
+                    _messeges.Clear();
+                    try
+                    {
+                        _messeges = JsonConvert.DeserializeObject<List<MessegeClass>>(json);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Чат не смог загрузиться" + ex.Message);
+                    }
+                    foreach (var item in _messeges)
+                    {
+                        Console.WriteLine(item.ToString());
+                    }
                 }
             }
-            return messeges;
+        }
+
+        public ChatClass()
+        {
         }
     }
 }

@@ -5,15 +5,16 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Schema;
 
 namespace Messenger
 {
     public partial class Form1 : Form
     {
-        private ObservableCollection<Message> messages = new ObservableCollection<Message>();
         private BindingList<string> users = new BindingList<string>();
         private MenuStrip menuStrip;
         private ToolStripMenuItem startServerToolStripMenuItem;
@@ -21,6 +22,8 @@ namespace Messenger
         private ListBox chatHistory;
         private TextBox txtMessage;
         private Button btnSend;
+        private Panel panelConnection;
+        private Panel panelMessege;
         private Label lblIPAddress;
         private TextBox txtIPAddress;
         private Label lblPort;
@@ -30,14 +33,93 @@ namespace Messenger
         private Button btnConnect;
         private ListBox userList;
 
-        private Server server;
-        private Client client;
+        private Server _server;
+        public Server Server { get { return _server; } set { _server = value; } } 
+        private Client _client;
+        public Client client { get { return _client; } set { _client = value; } }
         public Form1()
         {
             InitializeComponent();
             this.AutoScaleDimensions = new SizeF(8F, 16F);
             this.ClientSize = new Size(800, 600);
             this.Text = "Мессенджер";
+
+            chatHistory = new ListBox();
+            chatHistory.Dock = DockStyle.Fill;
+            chatHistory.Location = new Point(0, 120);
+            chatHistory.Height = 400;
+            Controls.Add(chatHistory);
+
+            panelMessege = new Panel();
+            panelMessege.Dock = DockStyle.Bottom;
+            panelMessege.Height = 40;
+            Controls.Add(panelMessege);
+
+            txtMessage = new TextBox();
+            txtMessage.Location = new Point(0, 10);
+            txtMessage.Width = 400;
+            panelMessege.Controls.Add(txtMessage);
+
+            btnSend = new Button();
+            btnSend.Text = "Отправить";
+            btnSend.Location = new Point(405, 10);
+            btnSend.AutoSize = true;
+            btnSend.Click += BtnSend_Click;
+            panelMessege.Controls.Add(btnSend);
+
+            panelConnection = new Panel();
+            panelConnection.Dock = DockStyle.Top;
+            panelConnection.Height = 35;
+            Controls.Add(panelConnection);
+
+            lblIPAddress = new Label();
+            lblIPAddress.Text = "IP:";
+            lblIPAddress.AutoSize = true;
+            lblIPAddress.Location = new Point(10, 13);
+            panelConnection.Controls.Add(lblIPAddress);
+
+            txtIPAddress = new TextBox();
+            txtIPAddress.Location = new Point(30, 10);
+            panelConnection.Controls.Add(txtIPAddress);
+
+            lblPort = new Label();
+            lblPort.Text = "Порт:";
+            lblPort.AutoSize = true;
+            lblPort.Location = new Point(140, 13);
+            panelConnection.Controls.Add(lblPort);
+
+            numPort = new NumericUpDown();
+            numPort.Minimum = 1024;
+            numPort.Maximum = 65535;
+            numPort.Value = 5000;
+            numPort.Location = new Point(175, 10);
+            numPort.Width = 50;
+            panelConnection.Controls.Add(numPort);
+
+            lblUsername = new Label();
+            lblUsername.Text = "Имя пользователя:";
+            lblUsername.AutoSize = true;
+            lblUsername.Location = new Point(230, 13);
+            panelConnection.Controls.Add(lblUsername);
+
+            txtUsername = new TextBox();
+            txtUsername.Location = new Point(336, 10);
+            txtUsername.Width = 150;
+            panelConnection.Controls.Add(txtUsername);
+
+            btnConnect = new Button();
+            btnConnect.Text = "Подключиться";
+            btnConnect.AutoSize = true;
+            btnConnect.Location = new Point(500, 9);
+            btnConnect.Click += BtnConnect_Click;
+            panelConnection.Controls.Add(btnConnect);
+
+            userList = new ListBox();
+            userList.Dock = DockStyle.Right;
+            userList.Width = 200;
+            Controls.Add(userList);
+            //chatHistory.DataSource = Messages;
+            userList.DataSource = users;
 
             menuStrip = new MenuStrip();
             startServerToolStripMenuItem = new ToolStripMenuItem("Запустить сервер");
@@ -51,67 +133,6 @@ namespace Messenger
 
             this.Controls.Add(menuStrip);
 
-            chatHistory = new ListBox();
-            chatHistory.Dock = DockStyle.Fill;
-            chatHistory.Location = new Point(0, 120);
-            chatHistory.Height = 400;
-            Controls.Add(chatHistory);
-
-            txtMessage = new TextBox();
-            txtMessage.Dock = DockStyle.Bottom;
-            txtMessage.Location = new Point(0, 520);
-            txtMessage.Width = 600;
-            Controls.Add(txtMessage);
-
-            btnSend = new Button();
-            btnSend.Text = "Отправить";
-            btnSend.Dock = DockStyle.Bottom;
-            btnSend.Location = new Point(600, 520);
-            btnSend.Click += BtnSend_Click;
-            Controls.Add(btnSend);
-
-            lblIPAddress = new Label();
-            lblIPAddress.Text = "IP:";
-            lblIPAddress.Location = new Point(10, 10);
-            Controls.Add(lblIPAddress);
-
-            txtIPAddress = new TextBox();
-            txtIPAddress.Location = new Point(100, 10);
-            Controls.Add(txtIPAddress);
-
-            lblPort = new Label();
-            lblPort.Text = "Порт:";
-            lblPort.Location = new Point(10, 40);
-            Controls.Add(lblPort);
-
-            numPort = new NumericUpDown();
-            numPort.Minimum = 1024;
-            numPort.Maximum = 65535;
-            numPort.Value = 5000;
-            numPort.Location = new Point(100, 40);
-            Controls.Add(numPort);
-
-            lblUsername = new Label();
-            lblUsername.Text = "Имя пользователя:";
-            lblUsername.Location = new Point(10, 70);
-            Controls.Add(lblUsername);
-
-            txtUsername = new TextBox();
-            txtUsername.Location = new Point(100, 70);
-            Controls.Add(txtUsername);
-
-            btnConnect = new Button();
-            btnConnect.Text = "Подключиться";
-            btnConnect.Location = new Point(10, 100);
-            btnConnect.Click += BtnConnect_Click;
-            Controls.Add(btnConnect);
-
-            userList = new ListBox();
-            userList.Dock = DockStyle.Right;
-            userList.Width = 200;
-            Controls.Add(userList);
-            chatHistory.DataSource = messages;
-            userList.DataSource = users;
         }
 
 
@@ -119,24 +140,44 @@ namespace Messenger
         {
 
         }
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            if (_client != null) _client.Disconnect();
+            if (_server != null) _server.StopListening();
+        }
 
-        public void AddMessage(Message msg)
+
+        public void AddMessage(MessegeClass msg)
         {
             Invoke((Action)(() =>
             {
-                messages.Add(msg);
-                chatHistory.SelectedIndex = messages.Count - 1; 
+                Console.WriteLine(msg.ToString());
+                chatHistory.Items.Add(msg);
+                chatHistory.Refresh();
+            }));
+        }
+        public void AddHistory(List<MessegeClass> msges)
+        {
+            Invoke((Action)(() =>
+            {
+                Console.WriteLine("Recieved Chat History");
+                foreach (var m in msges)
+                {
+                    chatHistory.Items.Add(m);
+                }
+                chatHistory.Refresh();
             }));
         }
 
-        public void UpdateActiveUsers(List<Server.ActiveClients> newUsers)
+        public void UpdateActiveUsers(List<string> newUsers)
         {
             Invoke((Action)(() =>
             {
                 users.Clear();
-                foreach (var user in newUsers.OrderBy(u => u.username))
+                foreach (var user in newUsers.OrderBy(u => u))
                 {
-                    users.Add(user.username);
+                    users.Add(user);
                 }
             }));
         }
@@ -145,19 +186,19 @@ namespace Messenger
         {
             if (!string.IsNullOrEmpty(txtMessage.Text))
             {
-                // Логика отправки сообщения
+                _ = client.SendMessage(txtMessage.Text);
                 txtMessage.Clear();
             }
         }
 
         private void BtnConnect_Click(object sender, EventArgs e)
         {
-            //логика подключения к серверу
+            _ = Client.Main(this, txtIPAddress.Text, (int)numPort.Value, txtUsername.Text);
         }
 
         private void StartServerToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Логика старта сервера
+            _server = new Server();
             Console.WriteLine("Сервер запущен");
             startServerToolStripMenuItem.Enabled = false;
             stopServerToolStripMenuItem.Enabled = true;
@@ -166,7 +207,7 @@ namespace Messenger
 
         private void StopServerToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Логика остановки сервера
+            Server.StopListening();
             Console.WriteLine("Сервер остановлен");
             startServerToolStripMenuItem.Enabled = true;
             stopServerToolStripMenuItem.Enabled = false; 
