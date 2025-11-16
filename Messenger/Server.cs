@@ -36,26 +36,40 @@ namespace Messenger
             while (true)
             {
                 TcpClient client = await listener.AcceptTcpClientAsync();
-                Console.WriteLine("Новый клиент подключился!");
-                NetworkStream stream = client.GetStream();
-                ActiveClients newC = new ActiveClients();
-                byte[] buffer;
-                buffer = Encoding.UTF8.GetBytes("Name?");
-                await stream.WriteAsync(buffer, 0, buffer.Length);
-
-                buffer = new byte[client.ReceiveBufferSize];
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-
-                if (bytesRead > 0)
+                bool isOld = false;
+                foreach (var us in curActiveClients)
                 {
-                    string dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    newC.username = dataReceived;
-                    newC.tcpclient = client;
-                    curActiveClients.Add(newC);
-                    HistoryUpdate();
-                    UserListUpdate();
+                    if (us.tcpclient == client)
+                    {
+                        isOld = true;
+                        break;
+                    }
                 }
-                _ = HandleClient(newC);
+                if (!isOld)
+                {
+                    Console.WriteLine("Новый клиент подключился!");
+                    NetworkStream stream = client.GetStream();
+                    ActiveClients newC = new ActiveClients();
+                    byte[] buffer;
+                    buffer = Encoding.UTF8.GetBytes("Name?");
+                    await stream.WriteAsync(buffer, 0, buffer.Length);
+
+                    buffer = new byte[client.ReceiveBufferSize];
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+                    if (bytesRead > 0)
+                    {
+
+                        string dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        Console.WriteLine("ответ по имени" + dataReceived);
+                        newC.username = dataReceived;
+                        newC.tcpclient = client;
+                        curActiveClients.Add(newC);
+                        HistoryUpdate(client);
+                        UserListUpdate();
+                    }
+                    _ = HandleClient(newC);
+                }
             }
         }
 
@@ -68,7 +82,6 @@ namespace Messenger
             }
             return names;
         }
-
 
         private async Task HandleClient(ActiveClients client)
         {
@@ -84,12 +97,19 @@ namespace Messenger
                     if (bytesRead > 0)
                     {
                         string dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        if (dataReceived == "QUIT")
+                        {
+                            curActiveClients.Remove(client);
+                            client.tcpclient.Close();
+                            UserListUpdate();
+                        }
                         MessegeClass newMSSG = new MessegeClass(dataReceived);
                         if (newMSSG.Messege.recipient != null)
                         {
                             chat.AddMessege(dataReceived);
                             foreach (ActiveClients actClient in curActiveClients)
                             {
+                                // Здесь по сути происходит маршрутизация. Однако пока не предусмотрен ввод получателя.
                                 if (newMSSG.Messege.recipient == "All" || newMSSG.Messege.recipient == actClient.username || newMSSG.Messege.sender == actClient.username)
                                 {
                                     await actClient.tcpclient.GetStream().WriteAsync(buffer, 0, buffer.Length);
@@ -104,6 +124,7 @@ namespace Messenger
                     Console.WriteLine("Исключение при приёме данных (Юзер отключен): " + ex.Message);
                     curActiveClients.Remove(client);
                     client.tcpclient.Close();
+                    UserListUpdate();
                     break;
                 }
                 catch (Exception ex)
@@ -111,6 +132,7 @@ namespace Messenger
                     Console.WriteLine($"Общая ошибка при обработке клиента: {ex.Message}");
                     curActiveClients.Remove(client);
                     client.tcpclient.Close();
+                    UserListUpdate();
                     break;
                 }
             }
@@ -130,21 +152,19 @@ namespace Messenger
             catch (Exception ex) { Console.WriteLine("Не смог преобразовать curActiveClients в JSON: " + ex.Message); }
             
         }
-        private async void HistoryUpdate()
+        private async void HistoryUpdate(TcpClient client)
         {
+            //Нужно переписать на отправку сообщений по одному.
+            //Чтобы исключить получение личных сообщений и уменьшить потерю данных
             byte[] buffer = null;
             try
             {
                 buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(chat.Messeges));
-                foreach (ActiveClients actClient in curActiveClients)
-                {
-                    await actClient.tcpclient.GetStream().WriteAsync(buffer, 0, buffer.Length);
-                }
+                await client.GetStream().WriteAsync(buffer, 0, buffer.Length);
             }
             catch (Exception ex) { Console.WriteLine("Не смог преобразовать curActiveClients в JSON: " + ex.Message); }
             
         }
-
 
         public void StopListening()
         {

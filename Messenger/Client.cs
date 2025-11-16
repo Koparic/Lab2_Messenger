@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static Messenger.Server;
 
 namespace Messenger
 {
@@ -14,7 +14,7 @@ namespace Messenger
     {
         private Form1 form;
         private TcpClient tcpClient;
-        private bool isConnected;
+        public bool isConnected;
         private bool historyLoaded = false;
         private string username;
 
@@ -74,8 +74,10 @@ namespace Messenger
             }
         }
 
-        public void Disconnect()
+        public async void Disconnect()
         {
+            byte[] buffer = Encoding.UTF8.GetBytes("QUIT");
+            await tcpClient.GetStream().WriteAsync(buffer, 0, buffer.Length);
             isConnected = false;
             tcpClient.Close();
         }
@@ -96,7 +98,17 @@ namespace Messenger
         public async Task SendMessage(string message)
         {
             Console.WriteLine("Messege sended from " + username);
+            //Regex regex = new Regex(@"$$[^$$$$]+$$");
+            //MatchCollection matches = regex.Matches(message);
             MessegeClass newMssg = new MessegeClass(username, message);
+            //try
+            //{
+            //    Console.WriteLine(matches[0].Value);
+            //    newMssg = new MessegeClass(username, message, matches[0].Value);
+            //}
+            //catch
+            //{
+            //}
             byte[] buffer = Encoding.UTF8.GetBytes(newMssg.ConvertMessege());
             if (buffer != null)
                 await tcpClient.GetStream().WriteAsync(buffer, 0, buffer.Length);

@@ -31,6 +31,7 @@ namespace Messenger
         private Label lblUsername;
         private TextBox txtUsername;
         private Button btnConnect;
+        private Button btnDisConnect;
         private ListBox userList;
 
         private Server _server;
@@ -41,7 +42,7 @@ namespace Messenger
         {
             InitializeComponent();
             this.AutoScaleDimensions = new SizeF(8F, 16F);
-            this.ClientSize = new Size(800, 600);
+            this.ClientSize = new Size(900, 600);
             this.Text = "Мессенджер";
 
             chatHistory = new ListBox();
@@ -66,6 +67,7 @@ namespace Messenger
             btnSend.AutoSize = true;
             btnSend.Click += BtnSend_Click;
             panelMessege.Controls.Add(btnSend);
+            this.AcceptButton = btnSend;
 
             panelConnection = new Panel();
             panelConnection.Dock = DockStyle.Top;
@@ -114,11 +116,17 @@ namespace Messenger
             btnConnect.Click += BtnConnect_Click;
             panelConnection.Controls.Add(btnConnect);
 
+            btnDisConnect = new Button();
+            btnDisConnect.Text = "Отключиться";
+            btnDisConnect.AutoSize = true;
+            btnDisConnect.Location = new Point(600, 9);
+            btnDisConnect.Click += BtnDisConnect_Click;
+            panelConnection.Controls.Add(btnDisConnect);
+
             userList = new ListBox();
             userList.Dock = DockStyle.Right;
             userList.Width = 200;
             Controls.Add(userList);
-            //chatHistory.DataSource = Messages;
             userList.DataSource = users;
 
             menuStrip = new MenuStrip();
@@ -184,7 +192,7 @@ namespace Messenger
 
         private void BtnSend_Click(object sender, EventArgs e)
         {
-            if (!string.IsNullOrEmpty(txtMessage.Text))
+            if (!string.IsNullOrEmpty(txtMessage.Text) && _client != null && _client.isConnected)
             {
                 _ = client.SendMessage(txtMessage.Text);
                 txtMessage.Clear();
@@ -193,7 +201,20 @@ namespace Messenger
 
         private void BtnConnect_Click(object sender, EventArgs e)
         {
-            _ = Client.Main(this, txtIPAddress.Text, (int)numPort.Value, txtUsername.Text);
+            if ((_client == null || !_client.isConnected) && txtUsername.Text.Length > 0)
+                _ = Client.Main(this, txtIPAddress.Text, (int)numPort.Value, txtUsername.Text);
+        }
+        private void BtnDisConnect_Click(object sender, EventArgs e)
+        {
+            if (_client != null)
+            {
+                _client.Disconnect();
+                chatHistory.Items.Clear();
+                chatHistory.Refresh();
+                users.Clear();
+                userList.Refresh();
+                _client = null;
+            }
         }
 
         private void StartServerToolStripMenuItem_Click(object sender, EventArgs e)
