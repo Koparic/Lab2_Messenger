@@ -1,38 +1,52 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Messenger
 {
     internal class MessegeClass
     {
-        private Form1 form;
-        private string currentUserName;
-        private messegeStruct messege;
+        private messegeStruct _messege;
+        public messegeStruct Messege {  get { return _messege; } }
         public struct messegeStruct{
-            //public string ChatName;
             public string sender;
             public string recipient;
             public DateTime sendingTime;
             public string text;
         }
-
-        public MessegeClass(string text, string recipient = "All")
+        public override string ToString()
         {
-            messege.sender = currentUserName;
-            messege.recipient = recipient;
-            messege.text = text;
-            messege.sendingTime = DateTime.Now;
+            return $"{_messege.sendingTime.ToShortDateString()} {_messege.sender}: {_messege.text}";
+        }
+        public MessegeClass(string un, string text, string recipient = "All")
+        {
+            _messege.sender = un;
+            _messege.recipient = recipient;
+            _messege.text = text;
+            _messege.sendingTime = DateTime.Now;
+        }
+
+        public MessegeClass(string JSON)
+        {
+            try
+            {
+                _messege = (JsonConvert.DeserializeObject<MessegeClass.messegeStruct>(JSON));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Исключение при конвертации или добавлеии: " + ex.Message);
+            }
         }
 
         public string ConvertMessege()
         {
-            return JsonConvert.SerializeObject(messege);
+            return JsonConvert.SerializeObject(_messege);
         }
-
 
     }
 }

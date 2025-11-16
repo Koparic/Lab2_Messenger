@@ -32,10 +32,14 @@ namespace Messenger
 
                     byte[] buffer = new byte[tcpClient.ReceiveBufferSize];
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-
                     if (bytesRead > 0)
                     {
                         string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        if (message == "Name?")
+                        {
+                            buffer = Encoding.UTF8.GetBytes(username);
+                            await tcpClient.GetStream().WriteAsync(buffer, 0, buffer.Length);
+                        }
                         curChat.AddMessege(message);
                     }
                 }
